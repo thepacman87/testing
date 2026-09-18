@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, ExternalLink, Settings2, Cpu, Cloud, Globe } from "lucide-react";
+import { Sparkles, ExternalLink, Settings2, Cpu, Cloud } from "lucide-react";
 
 type Props = {
   mode: "local" | "cloud";
@@ -15,8 +15,7 @@ export function Header({
   statusLabel,
   cloudAvailable,
 }: Props) {
-  const label = statusLabel || "Free public generate · no API key";
-  const isPollinations = /pollinations|free public/i.test(label);
+  const label = statusLabel || "Local model · no external AI";
   const isSdTurbo = /sd-turbo|webgpu/i.test(label);
   const isCloud = mode === "cloud" || /fal|cloud/i.test(label);
 
@@ -32,7 +31,7 @@ export function Header({
               PixForge
             </h1>
             <p className="hidden text-[11px] text-muted sm:block">
-              Imagine-style editing · no API key
+              Imagine-style · local open-weight AI
             </p>
           </div>
         </div>
@@ -44,16 +43,12 @@ export function Header({
                 ? "border-violet-500/40 bg-violet-500/10 text-violet-300"
                 : isSdTurbo
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                  : isPollinations
-                    ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
-                    : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                  : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
             }`}
             title={label}
           >
             {isCloud ? (
               <Cloud className="h-3 w-3 shrink-0" />
-            ) : isPollinations ? (
-              <Globe className="h-3 w-3 shrink-0" />
             ) : (
               <Cpu className="h-3 w-3 shrink-0" />
             )}

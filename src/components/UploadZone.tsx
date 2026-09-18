@@ -134,7 +134,7 @@ export function UploadZone({
             <div>
               <p className="font-medium">Generate an image</p>
               <p className="text-xs text-muted">
-                Free public Pollinations generate — no API key required
+                Local open-weight SD-Turbo — no external AI services
               </p>
             </div>
           </div>
@@ -165,9 +165,9 @@ export function UploadZone({
       )}
 
       <p className="mt-6 max-w-md text-center text-xs text-muted">
-        Generate uses the free public Pollinations endpoint (no API key; prompts
-        leave the device). Background removal, enhance, and color grades run
-        on-device via WASM.
+        Generate runs open-weight SD-Turbo on this machine (localhost sidecar).
+        Matched edits (bg remove, enhance, grades) use on-device WASM. Nothing
+        is sent to Pollinations/OpenAI/FAL unless you opt into cloud mode.
       </p>
     </div>
   );

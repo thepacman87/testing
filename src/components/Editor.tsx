@@ -23,11 +23,12 @@ export function Editor() {
   const [notice, setNotice] = useState<string | null>(null);
   const [mode, setMode] = useState<EngineMode>("local");
   const [cloudAvailable, setCloudAvailable] = useState(false);
+  const [sidecarReady, setSidecarReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [modelLoading, setModelLoading] = useState(false);
   const [progress, setProgress] = useState<ProgressEvent | null>(null);
   const [capsWebgpu, setCapsWebgpu] = useState<boolean | null>(null);
-  const [statusLabel, setStatusLabel] = useState("Free public generate · no API key");
+  const [statusLabel, setStatusLabel] = useState("Local model · no external AI");
   const [editorBooted, setEditorBooted] = useState(false);
 
   // Boot: detect caps + optional cloud + preload editor pack
@@ -38,6 +39,8 @@ export function Editor() {
         const health = await fetch("/api/health").then((r) => r.json());
         if (!cancelled) {
           setCloudAvailable(Boolean(health.cloudAvailable));
+          setSidecarReady(Boolean(health.sidecarReady));
+          if (health.sidecarReady) setStatusLabel("Local model · no external AI");
         }
       } catch {
         /* ignore */
@@ -60,9 +63,9 @@ export function Editor() {
         if (!cancelled) {
           setEditorBooted(true);
           setModelLoading(false);
-          setStatusLabel("Free public generate · no API key");
+          setStatusLabel("Local model · no external AI");
           setNotice(
-            "Generate uses Pollinations (no key). Matched edits (bg remove, enhance…) run on-device. Generate prompts leave the device."
+            "Generate uses local open-weight SD-Turbo on this machine — no external AI services. First run downloads model weights."
           );
         }
       } catch (err) {
@@ -257,8 +260,8 @@ export function Editor() {
       await engine.loadGenerator((e) => setProgress(e), { preloadSdTurbo: true });
       setStatusLabel(
         engine.isPreferOnDeviceGenerate()
-          ? "SD-Turbo · on-device WebGPU"
-          : "Free public generate · no API key"
+          ? "SD-Turbo · browser WebGPU"
+          : "Local model · no external AI"
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generator load failed");
@@ -301,13 +304,14 @@ export function Editor() {
           setMode(m);
           setStatusLabel(
             m === "local"
-              ? "Free public generate · no API key"
+              ? "Local model · no external AI"
               : "Cloud · FAL FLUX"
           );
         }}
         cloudAvailable={cloudAvailable}
         capsWebgpu={capsWebgpu}
         onLoadGenerator={preloadGenerator}
+        sidecarReady={sidecarReady}
       />
 
       {(error || notice) && (

@@ -1,0 +1,14 @@
+# Install into .venv-ai from repo root:
+#   python3 -m venv .venv-ai
+#   .venv-ai/bin/pip install -r ai-sidecar/requirements.txt
+# Prefer CPU torch wheel:
+#   .venv-ai/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+diffusers==0.32.2
+transformers>=4.44,<5
+accelerate
+safetensors
+pillow
+fastapi
+uvicorn
+pydantic

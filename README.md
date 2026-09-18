@@ -1,75 +1,95 @@
 # PixForge
 
-**PixForge** is an Imagine-style AI photo studio. **No API key is required** for the default experience.
+**PixForge** generates and edits images with **open-weight models on your machine**.  
+Default generate does **not** call Pollinations, FAL, OpenAI, Replicate, or any other remote AI API.
 
-Upload a photo or generate from a text prompt, describe edits in natural language, iterate with a history strip, and download.
+> Local SD-Turbo is **not** Grok Imagine. Expect research-quality Turbo images, slower on CPU, and a one-time weight download.
 
-> On-device open-weight edits are not as strong as cloud Grok Imagine / FLUX. Default **generate** uses a free public endpoint so results look like real photos even without WebGPU or paid keys.
-
-## Quick start (no `.env` needed)
+## Quick start
 
 ```bash
+# 1) Node deps
 npm install
+
+# 2) Python sidecar venv (one-time; run.sh creates it if missing)
+python3 -m venv .venv-ai
+.venv-ai/bin/pip install -U pip wheel
+.venv-ai/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu
+.venv-ai/bin/pip install -r ai-sidecar/requirements.txt
+
+# 3) Run Next + local AI together
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
+Or separately:
+
+```bash
+npm run ai          # SD-Turbo on http://127.0.0.1:8100
+npm run dev:web     # Next only
+```
+
+Production web build (sidecar still needed at runtime for generate):
+
 ```bash
 npm run build && npm start
+# in another terminal: npm run ai
 ```
 
 ## How generate works (default)
 
-| Path | When | Needs key? | Notes |
-|------|------|------------|-------|
-| **Pollinations.ai** | Default for text-to-image + open-ended “reimagine” | **No** | Public URL `https://image.pollinations.ai/prompt/...` — photographic-style images |
-| On-device WASM tools | Matched intents (bg remove, enhance, grades, bokeh…) | No | Fully local after model download |
-| SD-Turbo (WebGPU) | Optional Settings preload | No | Private on-device generate when WebGPU exists |
-| FAL FLUX Kontext | Optional Settings → Cloud | Server `FAL_KEY` | Paid/quality upgrade |
+| Path | Role |
+|------|------|
+| **Local SD-Turbo** (`stabilityai/sd-turbo`) | Default txt2img / reimagine via Python sidecar (`ai-sidecar/server.py`) on **127.0.0.1:8100** |
+| On-device WASM edits | Background remove, enhance, grades, bokeh (Transformers.js) |
+| Browser WebGPU SD-Turbo | Optional Settings preload |
+| FAL FLUX | Optional cloud edit only if `FAL_KEY` set — **not** default generate |
+
+`POST /api/generate` proxies **only** to the localhost sidecar.
+
+### Hardware expectations
+
+| Hardware | 512×512, 1-step SD-Turbo (approx.) |
+|----------|-------------------------------------|
+| CPU (modern, 8+ threads) | ~30s–3+ minutes first gens after load |
+| NVIDIA CUDA | Much faster (seconds) if torch sees GPU |
+| WebGPU browser path | Optional; not required |
+
+**Disk:** first run downloads ~2–3 GB weights into `.cache/huggingface/` (gitignored).
 
 ### Privacy
 
-- **Generate / reimagine (Pollinations):** your **text prompt leaves the device** and is sent to the public Pollinations service (no PixForge API key; their terms/rate limits apply).
-- **Matched local edits** (remove background, enhance, color grades, etc.): stay **on-device** via Transformers.js / WASM.
-- **Fully offline:** use only local edit intents; skip Generate / open-ended reimagine.
+- Default generate stays on your machine (localhost).
+- No prompts are sent to third-party AI endpoints unless you enable optional cloud mode.
 
-## Local edit models
+## Scripts
 
-| Capability | Model / method |
-|------------|----------------|
-| Background removal | `onnx-community/ormbg-ONNX` |
-| Enhance / upscale | `Xenova/swin2SR-classical-sr` |
-| Portrait bokeh | Depth Anything + composite |
-| Color grades | Canvas ops via NL intent |
-| Caption (for reimagine) | `Xenova/vit-gpt2-image-captioning` |
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Next.js + AI sidecar (concurrently) |
+| `npm run ai` | Sidecar only |
+| `npm run dev:web` | Next.js only |
+| `npm run build` / `start` | Production Next app |
 
-Stack: Next.js App Router, TypeScript, Tailwind, `@huggingface/transformers`, optional `web-txt2img` / ONNX Runtime Web.
-
-## Optional env (cloud upgrade only)
+## Optional env
 
 ```bash
 cp .env.example .env.local
-# FAL_KEY=...   # optional
 ```
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `FAL_KEY` | No | Enables optional cloud mode |
-| `MOCK_MODE` | No | Force cloud route mock if `true` |
-
-## API
-
-- `POST /api/generate` — keyless proxy to Pollinations (`{ prompt, width?, height?, seed? }`)
-- `POST /api/edit` — optional FAL cloud edit when configured
-- `GET /api/health` — status / capability flags
+| `PIXFORGE_AI_URL` | No | Sidecar base URL (default `http://127.0.0.1:8100`) |
+| `FAL_KEY` | No | Optional cloud edit upgrade only |
+| `ENABLE_EXTERNAL_GENERATE` | No | Must stay unset/false — external generate is not the default |
 
 ## Limitations
 
-- Pollinations is a third-party free service (availability, safety filters, and rate limits are outside PixForge’s control).
-- Open-ended photo edits are “reimagine” (new image guided by caption + prompt), not pixel-perfect instruct-edit like FLUX Kontext.
-- First load of on-device editor models needs network to Hugging Face; then they cache in the browser.
+- SD-Turbo is a **1–4 step distilled** model (research); faces/hands can look off vs large cloud models.
+- CPU generation is slow; keep the sidecar warm.
+- Next `build` does not bundle multi-GB weights; the sidecar downloads them at runtime.
 
 ## License
 
-MIT
+MIT — SD-Turbo has its own research/model license from Stability AI.

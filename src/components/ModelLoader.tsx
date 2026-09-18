@@ -54,10 +54,10 @@ export function ModelLoader({ visible, progress, capsWebgpu }: Props) {
           <li className="flex items-start gap-2">
             <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-300" />
             <span>
-              Text-to-image / reimagine: free public Pollinations (no API key).
-              Optional on-device SD-Turbo when WebGPU is available
+              Text-to-image / reimagine: local open-weight SD-Turbo via
+              localhost sidecar (CPU or GPU). Optional browser WebGPU SD-Turbo
               {capsWebgpu === false
-                ? " — WebGPU not detected on this device."
+                ? " — WebGPU not detected; CPU sidecar is used."
                 : capsWebgpu
                   ? " — WebGPU detected."
                   : "."}

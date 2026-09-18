@@ -42,3 +42,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local AI sidecar
+.venv-ai/
+.ai-venv/
+.cache/
+ai-sidecar/.cache/
+*.safetensors

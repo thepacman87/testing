@@ -95,8 +95,8 @@ export function PromptBar({
           </button>
         </div>
         <p className="mt-2 text-center text-[11px] text-muted">
-          Enter to submit · Matched edits stay on-device · Open-ended reimagine
-          uses free public Pollinations (no key)
+          Enter to submit · Matched edits on-device · Reimagine uses local
+          SD-Turbo (no external AI)
         </p>
       </div>
     </div>

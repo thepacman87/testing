@@ -1,10 +1,10 @@
 /**
- * PixForge local / keyless engine.
+ * PixForge local engine — no external AI for default generate.
  *
- * - Editor pack (on-device WASM/WebGPU): Transformers.js — bg remove, enhance, depth, grades
- * - Default generate / reimagine: Pollinations.ai (keyless public endpoint — real photos)
- * - Optional: SD-Turbo on-device when WebGPU is available (privacy upgrade)
- * - Optional: FAL cloud when server has FAL_KEY
+ * - Editor pack (WASM/WebGPU): Transformers.js — bg remove, enhance, depth, grades
+ * - Default generate / reimagine: local open-weight SD-Turbo via localhost Python sidecar
+ * - Optional browser SD-Turbo (WebGPU) if preloaded
+ * - Optional FAL only when user enables cloud + FAL_KEY (not default)
  */
 
 import type { Caps, ProgressEvent } from "./types";
@@ -23,7 +23,7 @@ import {
   vivid,
   warm,
 } from "./canvas-ops";
-import { generateViaPollinationsWithProxy } from "./pollinations";
+import { generateLocalPhotoreal } from "./local-generate";
 
 // Pipelines are dynamically typed — HF overloads are too wide for TS2590.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -218,7 +218,7 @@ export function isPreferOnDeviceGenerate() {
 }
 
 /**
- * Mark generator ready immediately (Pollinations needs no download).
+ * Mark generator ready; local sidecar handles photoreal txt2img.
  * Optionally also preload SD-Turbo when WebGPU is available.
  */
 export async function loadGenerator(
@@ -231,7 +231,7 @@ export async function loadGenerator(
     onProgress,
     "ready",
     100,
-    "Free public generate ready (Pollinations · no API key)"
+    "Local generate ready (SD-Turbo sidecar · no external AI)"
   );
 
   if (!opts?.preloadSdTurbo) return;
@@ -240,7 +240,7 @@ export async function loadGenerator(
       onProgress,
       "ready",
       100,
-      "WebGPU unavailable — keeping Pollinations as default generate"
+      "WebGPU unavailable — using local CPU sidecar for generate"
     );
     return;
   }
@@ -281,7 +281,7 @@ export async function loadGenerator(
       onProgress,
       "ready",
       100,
-      "SD-Turbo unavailable — using free public Pollinations"
+      "Browser SD-Turbo unavailable — using local CPU sidecar"
     );
   }
 }
@@ -313,35 +313,31 @@ export async function generateImage(
       throw new Error(result.error || "SD-Turbo generation failed");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "SD-Turbo error";
-      emit(onProgress, "error", 0, `${msg} — falling back to Pollinations`);
+      emit(onProgress, "error", 0, `${msg} — falling back to local sidecar`);
     }
   }
 
-  // Default: keyless Pollinations (real photographic-style images, no API key)
+  // Default: local open-weight SD-Turbo (Python sidecar on localhost)
   try {
     emit(
       onProgress,
       "ready",
-      25,
-      "Free public generate (Pollinations · no API key)…"
+      20,
+      "Local SD-Turbo generate (no external AI)…"
     );
-    const result = await generateViaPollinationsWithProxy(prompt, {
+    const result = await generateLocalPhotoreal(prompt, {
       seed,
-      width: 768,
-      height: 768,
+      width: 512,
+      height: 512,
+      steps: 1,
     });
     emit(onProgress, "ready", 100, result.meta);
     return result;
   } catch (err) {
     const msg =
-      err instanceof Error ? err.message : "Free public generate failed";
+      err instanceof Error ? err.message : "Local generate failed";
     emit(onProgress, "error", 0, msg);
-    // Last-resort abstract synth so the UI still responds
-    const imageDataUrl = synthesizeFromPrompt(prompt);
-    return {
-      imageDataUrl,
-      meta: `Local synth fallback · ${msg}`,
-    };
+    throw new Error(msg);
   }
 }
 
@@ -572,9 +568,9 @@ async function reimagine(
     .filter(Boolean)
     .join(", ");
 
-  emit(onProgress, "ready", 40, "Reimagining with free public generate…");
+  emit(onProgress, "ready", 40, "Reimagining with local SD-Turbo…");
 
-  // Prefer Pollinations for open-ended reimagine (works without WebGPU / API key)
+  // Prefer local SD-Turbo sidecar for open-ended reimagine
   try {
     const gen = await generateImage(genPrompt, undefined, onProgress);
     // Light blend with original for continuity when both load

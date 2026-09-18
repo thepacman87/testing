@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Cpu, Cloud, Globe, Sparkles } from "lucide-react";
+import { X, Cpu, Cloud, Sparkles } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -10,6 +10,7 @@ type Props = {
   cloudAvailable: boolean;
   capsWebgpu: boolean | null;
   onLoadGenerator: () => void;
+  sidecarReady?: boolean;
 };
 
 export function SettingsModal({
@@ -20,6 +21,7 @@ export function SettingsModal({
   cloudAvailable,
   capsWebgpu,
   onLoadGenerator,
+  sidecarReady,
 }: Props) {
   if (!open) return null;
 
@@ -38,16 +40,23 @@ export function SettingsModal({
         </div>
 
         <div className="space-y-4 px-5 py-4 text-sm">
-          <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-3 text-xs text-muted">
-            <div className="mb-1 flex items-center gap-2 font-medium text-cyan-200">
-              <Globe className="h-3.5 w-3.5" />
-              Default generate (no API key)
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs text-muted">
+            <div className="mb-1 flex items-center gap-2 font-medium text-emerald-200">
+              <Cpu className="h-3.5 w-3.5" />
+              Local model · no external AI
             </div>
             <p>
-              Text-to-image and open-ended “reimagine” use{" "}
-              <strong className="text-foreground/90">Pollinations.ai</strong> —
-              a free public endpoint. Prompts leave your device. Matched edits
-              (bg remove, enhance, grades…) stay on-device via WASM.
+              Text-to-image uses open-weight <strong className="text-foreground/90">SD-Turbo</strong> on
+              this machine via a localhost Python sidecar (
+              <code className="text-foreground/80">npm run ai</code>). No
+              Pollinations, FAL, OpenAI, or other remote model APIs for default
+              generate.
+            </p>
+            <p className="mt-2">
+              Sidecar:{" "}
+              <span className={sidecarReady ? "text-emerald-300" : "text-amber-300"}>
+                {sidecarReady ? "ready" : "not detected — run npm run ai / npm run dev"}
+              </span>
             </p>
           </div>
 
@@ -67,11 +76,10 @@ export function SettingsModal({
               >
                 <div className="mb-1 flex items-center gap-2 font-medium">
                   <Cpu className="h-4 w-4 text-emerald-300" />
-                  Local + free generate
+                  Local (default)
                 </div>
                 <p className="text-xs text-muted">
-                  No API key. On-device tools + Pollinations for generate /
-                  reimagine.
+                  Local SD-Turbo generate + on-device WASM edits. No API key.
                 </p>
               </button>
               <button
@@ -90,27 +98,27 @@ export function SettingsModal({
                 </div>
                 <p className="text-xs text-muted">
                   {cloudAvailable
-                    ? "Optional FLUX Kontext when FAL_KEY is set on the server."
-                    : "Unavailable — no FAL_KEY on server."}
+                    ? "Optional only — not used for default generate."
+                    : "Unavailable — no FAL_KEY."}
                 </p>
               </button>
             </div>
           </div>
 
           <div className="rounded-xl border border-border bg-surface-2/60 p-3 text-xs text-muted">
-            <p className="mb-2 font-medium text-foreground/90">Upgrades</p>
+            <p className="mb-2 font-medium text-foreground/90">Optional browser WebGPU</p>
             <ul className="mb-3 list-inside list-disc space-y-1">
               <li>
                 WebGPU:{" "}
                 {capsWebgpu === null
                   ? "detecting…"
                   : capsWebgpu
-                    ? "available — you can preload SD-Turbo for private on-device generate"
-                    : "not available — Pollinations remains the default"}
+                    ? "available"
+                    : "not available (CPU sidecar is the default)"}
               </li>
               <li>
-                Fully offline edits still use local WASM models only (no
-                Pollinations).
+                Quality is below cloud Grok Imagine — open-weight 1-step Turbo on
+                CPU/GPU.
               </li>
             </ul>
             <button
@@ -120,7 +128,7 @@ export function SettingsModal({
               className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-cyan-200 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Preload on-device SD-Turbo
+              Preload browser SD-Turbo (WebGPU)
             </button>
           </div>
         </div>
