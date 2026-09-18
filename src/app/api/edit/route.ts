@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { editWithFal } from "@/lib/fal-edit";
 import { editWithMock } from "@/lib/mock-edit";
-import { providerLabel, resolveProvider } from "@/lib/provider";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const MAX_PROMPT = 2000;
-const MAX_IMAGE_CHARS = 12_000_000; // ~9MB base64-ish ceiling
+const MAX_IMAGE_CHARS = 12_000_000;
 
+/**
+ * Optional cloud edit endpoint (FAL). Default product path is local/on-device
+ * in the browser — this route is only used when the user enables Cloud mode
+ * and FAL_KEY is configured on the server.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -34,37 +38,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const provider = resolveProvider();
-
-    if (provider === "fal") {
-      try {
-        const result = await editWithFal(image, prompt);
-        return NextResponse.json({
-          imageUrl: result.imageUrl,
-          provider: "fal",
-          providerLabel: providerLabel("fal"),
-          seed: result.seed,
-          mock: false,
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "FAL edit failed";
-        console.error("[edit] FAL error:", message);
-        return NextResponse.json(
-          { error: `Image edit failed: ${message}` },
-          { status: 502 }
-        );
-      }
+    if (process.env.MOCK_MODE === "true" || !process.env.FAL_KEY) {
+      const result = await editWithMock(image, prompt);
+      return NextResponse.json({
+        imageUrl: result.imageUrl,
+        provider: "mock",
+        providerLabel: "Cloud unavailable — use Local mode",
+        mock: true,
+        notice:
+          "No FAL_KEY on server. Switch to Local mode (default) for on-device AI.",
+      });
     }
 
-    const result = await editWithMock(image, prompt);
-    return NextResponse.json({
-      imageUrl: result.imageUrl,
-      provider: "mock",
-      providerLabel: providerLabel("mock"),
-      mock: true,
-      notice:
-        "Running in demo/mock mode. Set FAL_KEY in .env.local for real AI edits.",
-    });
+    try {
+      const result = await editWithFal(image, prompt);
+      return NextResponse.json({
+        imageUrl: result.imageUrl,
+        provider: "fal",
+        providerLabel: "FAL · FLUX.1 Kontext [pro]",
+        seed: result.seed,
+        mock: false,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "FAL edit failed";
+      console.error("[edit] FAL error:", message);
+      return NextResponse.json(
+        { error: `Cloud edit failed: ${message}` },
+        { status: 502 }
+      );
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unexpected error";
     console.error("[edit] error:", message);

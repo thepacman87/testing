@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PixForge — AI Photo Editor",
+  title: "PixForge — On-device AI Photo Editor",
   description:
-    "Upload a photo, describe edits in natural language, iterate, and download. Imagine-style AI image editing.",
+    "Imagine-style photo editing that runs in your browser. No API key required. Upload or generate, edit with natural language, download.",
 };
 
 export default function RootLayout({

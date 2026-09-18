@@ -4,11 +4,13 @@ import { useEffect, useRef } from "react";
 import { Loader2, Sparkles, Wand2 } from "lucide-react";
 
 const SUGGESTIONS = [
-  "Make it look like a cinematic film still",
-  "Change the background to a sunset beach",
-  "Add soft golden hour lighting",
-  "Convert to black and white with high contrast",
-  "Make the colors more vibrant and punchy",
+  "Remove the background",
+  "Enhance and sharpen details",
+  "Make it black and white",
+  "Warm golden hour look",
+  "Blur the background (portrait bokeh)",
+  "Make colors more vivid",
+  "Reimagine as a cinematic film still",
 ];
 
 type Props = {
@@ -70,7 +72,7 @@ export function PromptBar({
                 if (!loading && !disabled && value.trim()) onSubmit();
               }
             }}
-            placeholder="Describe your edit… e.g. “replace the sky with aurora borealis”"
+            placeholder="Describe your edit… e.g. “remove the background” or “cinematic reimagine”"
             className="max-h-[140px] min-h-[40px] flex-1 resize-none bg-transparent py-2.5 text-sm outline-none placeholder:text-muted/70 disabled:opacity-50"
           />
           <button
@@ -82,7 +84,7 @@ export function PromptBar({
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="hidden sm:inline">Editing…</span>
+                <span className="hidden sm:inline">Working…</span>
               </>
             ) : (
               <>
@@ -93,8 +95,8 @@ export function PromptBar({
           </button>
         </div>
         <p className="mt-2 text-center text-[11px] text-muted">
-          Enter to submit · Shift+Enter for newline · Edits apply to the selected
-          image
+          Enter to submit · On-device AI by default · Open-ended prompts use
+          SD-Turbo reimagine when WebGPU is available
         </p>
       </div>
     </div>

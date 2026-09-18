@@ -1,13 +1,20 @@
 "use client";
 
-import { Sparkles, ExternalLink } from "lucide-react";
+import { Sparkles, ExternalLink, Settings2, Cpu, Cloud } from "lucide-react";
 
 type Props = {
-  providerLabel?: string;
-  mock?: boolean;
+  mode: "local" | "cloud";
+  onToggleSettings: () => void;
+  statusLabel?: string;
+  cloudAvailable?: boolean;
 };
 
-export function Header({ providerLabel, mock }: Props) {
+export function Header({
+  mode,
+  onToggleSettings,
+  statusLabel,
+  cloudAvailable,
+}: Props) {
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
@@ -20,23 +27,45 @@ export function Header({ providerLabel, mock }: Props) {
               PixForge
             </h1>
             <p className="hidden text-[11px] text-muted sm:block">
-              Natural-language photo editing
+              Imagine-style editing · on your device
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {providerLabel && (
-            <span
-              className={`hidden rounded-full border px-2.5 py-1 text-[11px] font-medium sm:inline-flex ${
-                mock
-                  ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-                  : "border-violet-500/40 bg-violet-500/10 text-violet-300"
-              }`}
-            >
-              {providerLabel}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+              mode === "local"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                : "border-violet-500/40 bg-violet-500/10 text-violet-300"
+            }`}
+          >
+            {mode === "local" ? (
+              <Cpu className="h-3 w-3" />
+            ) : (
+              <Cloud className="h-3 w-3" />
+            )}
+            <span className="hidden sm:inline">
+              {statusLabel ||
+                (mode === "local" ? "Local · no API key" : "Cloud quality")}
             </span>
-          )}
+            <span className="sm:hidden">
+              {mode === "local" ? "Local" : "Cloud"}
+            </span>
+          </span>
+
+          <button
+            type="button"
+            onClick={onToggleSettings}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-xs text-muted transition hover:border-violet-500/50 hover:text-foreground"
+            title="Settings"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">
+              {cloudAvailable ? "Mode" : "About"}
+            </span>
+          </button>
+
           <a
             href="https://github.com/thepacman87/testing"
             target="_blank"
