@@ -1,10 +1,10 @@
 # PixForge
 
-**PixForge** is an Imagine-style AI photo studio that runs **on your device by default** — no API key, no account, no paid cloud required.
+**PixForge** is an Imagine-style AI photo studio. **No API key is required** for the default experience.
 
-Upload a photo or generate from a text prompt, describe edits in natural language, iterate with a history strip, and download results.
+Upload a photo or generate from a text prompt, describe edits in natural language, iterate with a history strip, and download.
 
-> Honest expectations: on-device open-weight models are **not** as strong as cloud Grok Imagine / FLUX. PixForge prioritizes privacy, zero cost, and a real local ML pipeline you can actually run with `npm install && npm run dev`.
+> On-device open-weight edits are not as strong as cloud Grok Imagine / FLUX. Default **generate** uses a free public endpoint so results look like real photos even without WebGPU or paid keys.
 
 ## Quick start (no `.env` needed)
 
@@ -16,67 +16,59 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000).
 
 ```bash
-npm run build && npm start   # production
+npm run build && npm start
 ```
 
-## What runs locally
+## How generate works (default)
 
-| Capability | Model / method | Notes |
-|------------|----------------|-------|
-| Background removal | `onnx-community/ormbg-ONNX` (Transformers.js) | Real neural matting |
-| Enhance / upscale | `Xenova/swin2SR-classical-sr` | Image-to-image SR |
-| Portrait bokeh | Depth Anything (Transformers.js) + composite | Depth-guided blur |
-| Color grades | On-device canvas ops | Warm / cool / B&W / vivid / vintage… via NL intent |
-| Creative reimagine | Caption (`vit-gpt2`) + **SD-Turbo** | Needs WebGPU; blends with original |
-| Text-to-image | **SD-Turbo** via `web-txt2img` | ~2.3 GB one-time download, browser-cached |
-| Generate fallback | Prompt-conditioned local synth | When WebGPU / SD-Turbo unavailable |
+| Path | When | Needs key? | Notes |
+|------|------|------------|-------|
+| **Pollinations.ai** | Default for text-to-image + open-ended “reimagine” | **No** | Public URL `https://image.pollinations.ai/prompt/...` — photographic-style images |
+| On-device WASM tools | Matched intents (bg remove, enhance, grades, bokeh…) | No | Fully local after model download |
+| SD-Turbo (WebGPU) | Optional Settings preload | No | Private on-device generate when WebGPU exists |
+| FAL FLUX Kontext | Optional Settings → Cloud | Server `FAL_KEY` | Paid/quality upgrade |
 
-Stack: **Next.js (App Router) + TypeScript + Tailwind**, client-side **`@huggingface/transformers`** + **`web-txt2img`** / **ONNX Runtime Web**.
+### Privacy
 
-Models download on first use into the browser cache. A first-run progress UI explains what is loading.
+- **Generate / reimagine (Pollinations):** your **text prompt leaves the device** and is sent to the public Pollinations service (no PixForge API key; their terms/rate limits apply).
+- **Matched local edits** (remove background, enhance, color grades, etc.): stay **on-device** via Transformers.js / WASM.
+- **Fully offline:** use only local edit intents; skip Generate / open-ended reimagine.
 
-### Browser requirements
+## Local edit models
 
-- **Best:** Chrome or Edge 113+ with **WebGPU** (for SD-Turbo generate / reimagine).
-- **Still works without WebGPU:** editor pack on WASM (bg remove, enhance, grades, depth when available) + synth generate fallback.
+| Capability | Model / method |
+|------------|----------------|
+| Background removal | `onnx-community/ormbg-ONNX` |
+| Enhance / upscale | `Xenova/swin2SR-classical-sr` |
+| Portrait bokeh | Depth Anything + composite |
+| Color grades | Canvas ops via NL intent |
+| Caption (for reimagine) | `Xenova/vit-gpt2-image-captioning` |
 
-## Optional cloud upgrade
+Stack: Next.js App Router, TypeScript, Tailwind, `@huggingface/transformers`, optional `web-txt2img` / ONNX Runtime Web.
 
-If you set `FAL_KEY` on the server, Settings → **Cloud upgrade** unlocks FAL **FLUX.1 Kontext [pro]** for higher-quality instruct edits. This is **off by default**; local mode needs no key.
+## Optional env (cloud upgrade only)
 
 ```bash
 cp .env.example .env.local
-# FAL_KEY=...   # optional only
+# FAL_KEY=...   # optional
 ```
 
-| Variable   | Required | Description                                      |
-|------------|----------|--------------------------------------------------|
-| `FAL_KEY`  | No       | Enables optional cloud mode                      |
-| `MOCK_MODE`| No       | Force cloud route into demo mock if set `true`   |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `FAL_KEY` | No | Enables optional cloud mode |
+| `MOCK_MODE` | No | Force cloud route mock if `true` |
 
-## Imagine-style workflow
+## API
 
-1. **Upload** a photo *or* **Generate** from a text prompt.
-2. Type a natural-language edit (`remove the background`, `enhance`, `cinematic reimagine`…).
-3. Iterate — each edit uses the selected history frame.
-4. Download anytime.
-
-## Project layout
-
-```
-src/
-  app/                  # Next.js app + optional /api/edit (cloud)
-  components/           # Editor UI, history, model loader
-  lib/local/            # On-device engine, intent router, canvas ops
-  lib/fal-edit.ts       # Optional cloud provider
-public/ort/             # ONNX Runtime Web WASM assets
-```
+- `POST /api/generate` — keyless proxy to Pollinations (`{ prompt, width?, height?, seed? }`)
+- `POST /api/edit` — optional FAL cloud edit when configured
+- `GET /api/health` — status / capability flags
 
 ## Limitations
 
-- Open-ended “change the shirt to red” edits are weaker than cloud instruct models; PixForge routes those through caption + SD-Turbo reimagine (WebGPU) or creative grades.
-- SD-Turbo download is large (~2.3 GB) and needs a capable GPU via WebGPU.
-- First load needs network to fetch models from Hugging Face; later runs use cache.
+- Pollinations is a third-party free service (availability, safety filters, and rate limits are outside PixForge’s control).
+- Open-ended photo edits are “reimagine” (new image guided by caption + prompt), not pixel-perfect instruct-edit like FLUX Kontext.
+- First load of on-device editor models needs network to Hugging Face; then they cache in the browser.
 
 ## License
 

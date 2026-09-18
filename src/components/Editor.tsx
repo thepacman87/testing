@@ -27,7 +27,7 @@ export function Editor() {
   const [modelLoading, setModelLoading] = useState(false);
   const [progress, setProgress] = useState<ProgressEvent | null>(null);
   const [capsWebgpu, setCapsWebgpu] = useState<boolean | null>(null);
-  const [statusLabel, setStatusLabel] = useState("Local · no API key");
+  const [statusLabel, setStatusLabel] = useState("Free public generate · no API key");
   const [editorBooted, setEditorBooted] = useState(false);
 
   // Boot: detect caps + optional cloud + preload editor pack
@@ -60,13 +60,9 @@ export function Editor() {
         if (!cancelled) {
           setEditorBooted(true);
           setModelLoading(false);
-          setStatusLabel(
-            caps.webgpu
-              ? "Local · WebGPU ready"
-              : "Local · WASM (no WebGPU)"
-          );
+          setStatusLabel("Free public generate · no API key");
           setNotice(
-            "Runs on your device — no API key required. First edits may finish model downloads."
+            "Generate uses Pollinations (no key). Matched edits (bg remove, enhance…) run on-device. Generate prompts leave the device."
           );
         }
       } catch (err) {
@@ -258,11 +254,11 @@ export function Editor() {
     setModelLoading(true);
     try {
       const engine = await import("@/lib/local/engine");
-      await engine.loadGenerator((e) => setProgress(e));
+      await engine.loadGenerator((e) => setProgress(e), { preloadSdTurbo: true });
       setStatusLabel(
-        engine.isGeneratorReady()
-          ? "Local · generator ready"
-          : "Local · generator fallback"
+        engine.isPreferOnDeviceGenerate()
+          ? "SD-Turbo · on-device WebGPU"
+          : "Free public generate · no API key"
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generator load failed");
@@ -304,7 +300,9 @@ export function Editor() {
         onModeChange={(m) => {
           setMode(m);
           setStatusLabel(
-            m === "local" ? "Local · no API key" : "Cloud quality"
+            m === "local"
+              ? "Free public generate · no API key"
+              : "Cloud · FAL FLUX"
           );
         }}
         cloudAvailable={cloudAvailable}

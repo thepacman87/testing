@@ -8,13 +8,15 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     defaultMode: "local",
+    defaultGenerate: "pollinations",
+    defaultGenerateLabel: "Free public generate (Pollinations · no key)",
     cloudAvailable,
-    provider: cloudAvailable ? "fal" : "local",
+    provider: cloudAvailable ? "fal-optional" : "pollinations+local",
     providerLabel: cloudAvailable
-      ? "Cloud available (optional)"
-      : "Local on-device (default)",
+      ? "Pollinations default · FAL optional"
+      : "Free public generate · no API key",
     mock: false,
     message:
-      "PixForge defaults to in-browser models. No API key required.",
+      "Generate uses Pollinations (keyless). Matched edits run on-device. No user API key required.",
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Cpu, Cloud } from "lucide-react";
+import { X, Cpu, Cloud, Globe, Sparkles } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -38,9 +38,22 @@ export function SettingsModal({
         </div>
 
         <div className="space-y-4 px-5 py-4 text-sm">
+          <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-3 text-xs text-muted">
+            <div className="mb-1 flex items-center gap-2 font-medium text-cyan-200">
+              <Globe className="h-3.5 w-3.5" />
+              Default generate (no API key)
+            </div>
+            <p>
+              Text-to-image and open-ended “reimagine” use{" "}
+              <strong className="text-foreground/90">Pollinations.ai</strong> —
+              a free public endpoint. Prompts leave your device. Matched edits
+              (bg remove, enhance, grades…) stay on-device via WASM.
+            </p>
+          </div>
+
           <div>
             <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">
-              Inference mode
+              Edit backend
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <button
@@ -54,11 +67,11 @@ export function SettingsModal({
               >
                 <div className="mb-1 flex items-center gap-2 font-medium">
                   <Cpu className="h-4 w-4 text-emerald-300" />
-                  Local (default)
+                  Local + free generate
                 </div>
                 <p className="text-xs text-muted">
-                  No API key. Models download into your browser cache and run
-                  on-device.
+                  No API key. On-device tools + Pollinations for generate /
+                  reimagine.
                 </p>
               </button>
               <button
@@ -73,39 +86,41 @@ export function SettingsModal({
               >
                 <div className="mb-1 flex items-center gap-2 font-medium">
                   <Cloud className="h-4 w-4 text-violet-300" />
-                  Cloud upgrade
+                  Cloud upgrade (FAL)
                 </div>
                 <p className="text-xs text-muted">
                   {cloudAvailable
-                    ? "Optional FAL FLUX Kontext when FAL_KEY is set on the server."
-                    : "Unavailable — server has no FAL_KEY. Local mode works fine."}
+                    ? "Optional FLUX Kontext when FAL_KEY is set on the server."
+                    : "Unavailable — no FAL_KEY on server."}
                 </p>
               </button>
             </div>
           </div>
 
           <div className="rounded-xl border border-border bg-surface-2/60 p-3 text-xs text-muted">
-            <p className="mb-2 font-medium text-foreground/90">Capabilities</p>
-            <ul className="list-inside list-disc space-y-1">
+            <p className="mb-2 font-medium text-foreground/90">Upgrades</p>
+            <ul className="mb-3 list-inside list-disc space-y-1">
               <li>
                 WebGPU:{" "}
                 {capsWebgpu === null
                   ? "detecting…"
                   : capsWebgpu
-                    ? "available (SD-Turbo enabled)"
-                    : "not available (synth fallback for generate)"}
+                    ? "available — you can preload SD-Turbo for private on-device generate"
+                    : "not available — Pollinations remains the default"}
               </li>
               <li>
-                Quality is below cloud Grok Imagine / FLUX — this is open-weight
-                on-device AI for privacy and zero cost.
+                Fully offline edits still use local WASM models only (no
+                Pollinations).
               </li>
             </ul>
             <button
               type="button"
               onClick={onLoadGenerator}
-              className="mt-3 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-cyan-200 transition hover:bg-cyan-500/20"
+              disabled={capsWebgpu === false}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-cyan-200 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Preload SD-Turbo generator
+              <Sparkles className="h-3.5 w-3.5" />
+              Preload on-device SD-Turbo
             </button>
           </div>
         </div>

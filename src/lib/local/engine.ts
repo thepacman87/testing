@@ -1,10 +1,10 @@
 /**
- * PixForge local on-device engine.
- * Runs entirely in the browser — no API keys.
+ * PixForge local / keyless engine.
  *
- * - Editor pack: Transformers.js (ormbg bg-removal, Swin2SR enhance, depth)
- * - Generator: SD-Turbo via web-txt2img when WebGPU is available (~2.3GB, cached)
- * - Fallback generate: prompt-conditioned local synth (no WebGPU)
+ * - Editor pack (on-device WASM/WebGPU): Transformers.js — bg remove, enhance, depth, grades
+ * - Default generate / reimagine: Pollinations.ai (keyless public endpoint — real photos)
+ * - Optional: SD-Turbo on-device when WebGPU is available (privacy upgrade)
+ * - Optional: FAL cloud when server has FAL_KEY
  */
 
 import type { Caps, ProgressEvent } from "./types";
@@ -23,6 +23,7 @@ import {
   vivid,
   warm,
 } from "./canvas-ops";
+import { generateViaPollinationsWithProxy } from "./pollinations";
 
 // Pipelines are dynamically typed — HF overloads are too wide for TS2590.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,20 +206,42 @@ export async function loadEditorPack(onProgress?: ProgressCb) {
   }
 }
 
-export async function loadGenerator(onProgress?: ProgressCb) {
-  if (generatorReady) {
-    emit(onProgress, "ready", 100, "Generator ready");
-    return;
-  }
+/** Prefer on-device SD-Turbo when user explicitly preloads it (WebGPU). */
+let preferOnDeviceGenerate = false;
+
+export function setPreferOnDeviceGenerate(v: boolean) {
+  preferOnDeviceGenerate = v;
+}
+
+export function isPreferOnDeviceGenerate() {
+  return preferOnDeviceGenerate;
+}
+
+/**
+ * Mark generator ready immediately (Pollinations needs no download).
+ * Optionally also preload SD-Turbo when WebGPU is available.
+ */
+export async function loadGenerator(
+  onProgress?: ProgressCb,
+  opts?: { preloadSdTurbo?: boolean }
+) {
   await detectCapabilities();
+  generatorReady = true;
+  emit(
+    onProgress,
+    "ready",
+    100,
+    "Free public generate ready (Pollinations · no API key)"
+  );
+
+  if (!opts?.preloadSdTurbo) return;
   if (!caps.webgpu) {
     emit(
       onProgress,
       "ready",
       100,
-      "WebGPU not available — using local synth for text-to-image"
+      "WebGPU unavailable — keeping Pollinations as default generate"
     );
-    generatorReady = true;
     return;
   }
 
@@ -226,14 +249,13 @@ export async function loadGenerator(onProgress?: ProgressCb) {
     onProgress,
     "loading-generator",
     5,
-    "Downloading SD-Turbo (~2.3 GB, one-time, cached in browser)…"
+    "Downloading SD-Turbo (~2.3 GB, optional on-device upgrade)…"
   );
 
   try {
     const { Txt2ImgWorkerClient } = await import("web-txt2img");
     txt2imgClient = Txt2ImgWorkerClient.createDefault();
 
-    // Progress from worker if available
     if (typeof txt2imgClient.onProgress === "function") {
       txt2imgClient.onProgress((p: { progress?: number; message?: string }) => {
         emit(
@@ -248,18 +270,18 @@ export async function loadGenerator(onProgress?: ProgressCb) {
     await txt2imgClient.load("sd-turbo", {
       backendPreference: ["webgpu"],
     });
-    generatorReady = true;
-    emit(onProgress, "ready", 100, "SD-Turbo ready (runs on your GPU)");
+    preferOnDeviceGenerate = true;
+    emit(onProgress, "ready", 100, "SD-Turbo ready · on-device WebGPU upgrade");
   } catch (err) {
     const message = err instanceof Error ? err.message : "SD-Turbo failed to load";
     emit(onProgress, "error", 0, message);
-    generatorReady = true; // allow synth fallback
     txt2imgClient = null;
+    preferOnDeviceGenerate = false;
     emit(
       onProgress,
       "ready",
       100,
-      "Falling back to local synth (SD-Turbo unavailable)"
+      "SD-Turbo unavailable — using free public Pollinations"
     );
   }
 }
@@ -269,11 +291,13 @@ export async function generateImage(
   seed?: number,
   onProgress?: ProgressCb
 ): Promise<{ imageDataUrl: string; meta: string }> {
-  if (!generatorReady) await loadGenerator(onProgress);
-  emit(onProgress, "ready", 10, "Generating…");
+  generatorReady = true;
+  emit(onProgress, "ready", 8, "Generating image…");
 
-  if (txt2imgClient) {
+  // Optional privacy upgrade: on-device SD-Turbo when preloaded
+  if (preferOnDeviceGenerate && txt2imgClient) {
     try {
+      emit(onProgress, "ready", 20, "Generating with on-device SD-Turbo…");
       const { promise } = txt2imgClient.generate({
         prompt,
         seed: seed ?? Math.floor(Math.random() * 1e9),
@@ -286,19 +310,39 @@ export async function generateImage(
           meta: "SD-Turbo · on-device WebGPU",
         };
       }
-      throw new Error(result.error || "Generation failed");
+      throw new Error(result.error || "SD-Turbo generation failed");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "SD-Turbo error";
-      emit(onProgress, "error", 0, msg);
+      emit(onProgress, "error", 0, `${msg} — falling back to Pollinations`);
     }
   }
 
-  // Fallback synth
-  const imageDataUrl = synthesizeFromPrompt(prompt);
-  return {
-    imageDataUrl,
-    meta: "Local synth · enable Chrome/Edge WebGPU for SD-Turbo",
-  };
+  // Default: keyless Pollinations (real photographic-style images, no API key)
+  try {
+    emit(
+      onProgress,
+      "ready",
+      25,
+      "Free public generate (Pollinations · no API key)…"
+    );
+    const result = await generateViaPollinationsWithProxy(prompt, {
+      seed,
+      width: 768,
+      height: 768,
+    });
+    emit(onProgress, "ready", 100, result.meta);
+    return result;
+  } catch (err) {
+    const msg =
+      err instanceof Error ? err.message : "Free public generate failed";
+    emit(onProgress, "error", 0, msg);
+    // Last-resort abstract synth so the UI still responds
+    const imageDataUrl = synthesizeFromPrompt(prompt);
+    return {
+      imageDataUrl,
+      meta: `Local synth fallback · ${msg}`,
+    };
+  }
 }
 
 export async function editImage(
@@ -509,7 +553,7 @@ async function reimagine(
   let caption = "";
   if (captioner) {
     try {
-      emit(onProgress, "ready", 30, "Understanding your photo…");
+      emit(onProgress, "ready", 20, "Understanding your photo…");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cap: any = await captioner(imageDataUrl);
       caption =
@@ -522,55 +566,48 @@ async function reimagine(
 
   const genPrompt = [
     prompt.trim(),
-    caption ? `based on a photo of ${caption}` : "photorealistic edit",
-    "high quality",
+    caption ? `based on a photo of ${caption}` : "photorealistic",
+    "high quality photograph",
   ]
     .filter(Boolean)
     .join(", ");
 
-  if (!generatorReady) {
-    try {
-      await loadGenerator(onProgress);
-    } catch {
-      /* ignore */
-    }
-  }
+  emit(onProgress, "ready", 40, "Reimagining with free public generate…");
 
-  if (txt2imgClient) {
-    emit(onProgress, "ready", 55, "Reimagining with SD-Turbo…");
+  // Prefer Pollinations for open-ended reimagine (works without WebGPU / API key)
+  try {
     const gen = await generateImage(genPrompt, undefined, onProgress);
-    // Blend lightly with original for continuity
+    // Light blend with original for continuity when both load
     try {
       const orig = await loadImage(imageDataUrl);
       const neu = await loadImage(gen.imageDataUrl);
       const canvas = imageToCanvas(orig, 768);
       const ctx = canvas.getContext("2d")!;
-      ctx.globalAlpha = 0.72;
+      ctx.globalAlpha = 0.78;
       ctx.drawImage(neu, 0, 0, canvas.width, canvas.height);
       ctx.globalAlpha = 1;
       return {
         imageDataUrl: canvasToDataUrl(canvas),
-        meta: `Reimagine · SD-Turbo${caption ? ` · “${caption.slice(0, 60)}”` : ""}`,
+        meta: `Reimagine · ${gen.meta}${caption ? ` · “${caption.slice(0, 50)}”` : ""}`,
       };
     } catch {
-      return gen;
+      return {
+        imageDataUrl: gen.imageDataUrl,
+        meta: `Reimagine · ${gen.meta}`,
+      };
     }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Reimagine failed";
+    emit(onProgress, "error", 0, msg);
+    const img = await loadImage(imageDataUrl);
+    const canvas = imageToCanvas(img);
+    vivid(canvas, 0.25);
+    warm(canvas, 0.1);
+    return {
+      imageDataUrl: canvasToDataUrl(canvas),
+      meta: `Creative grade fallback · ${msg}`,
+    };
   }
-
-  // No diffusion: apply vivid+warm as a creative nudge + overlay prompt synth at low opacity
-  const img = await loadImage(imageDataUrl);
-  const canvas = imageToCanvas(img);
-  vivid(canvas, 0.25);
-  warm(canvas, 0.1);
-  const synth = await loadImage(synthesizeFromPrompt(prompt, 512));
-  const ctx = canvas.getContext("2d")!;
-  ctx.globalAlpha = 0.22;
-  ctx.drawImage(synth, 0, 0, canvas.width, canvas.height);
-  ctx.globalAlpha = 1;
-  return {
-    imageDataUrl: canvasToDataUrl(canvas),
-    meta: "Creative grade · load SD-Turbo (WebGPU) for full reimagine",
-  };
 }
 
 async function rawImageToDataUrl(

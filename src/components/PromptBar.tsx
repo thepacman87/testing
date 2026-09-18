@@ -95,8 +95,8 @@ export function PromptBar({
           </button>
         </div>
         <p className="mt-2 text-center text-[11px] text-muted">
-          Enter to submit · On-device AI by default · Open-ended prompts use
-          SD-Turbo reimagine when WebGPU is available
+          Enter to submit · Matched edits stay on-device · Open-ended reimagine
+          uses free public Pollinations (no key)
         </p>
       </div>
     </div>

@@ -134,7 +134,7 @@ export function UploadZone({
             <div>
               <p className="font-medium">Generate an image</p>
               <p className="text-xs text-muted">
-                On-device SD-Turbo (WebGPU) or local synth — no API key
+                Free public Pollinations generate — no API key required
               </p>
             </div>
           </div>
@@ -165,9 +165,9 @@ export function UploadZone({
       )}
 
       <p className="mt-6 max-w-md text-center text-xs text-muted">
-        PixForge runs open-weight models in your browser by default. Quality is
-        below cloud Grok Imagine, but nothing leaves your device unless you
-        enable optional cloud mode.
+        Generate uses the free public Pollinations endpoint (no API key; prompts
+        leave the device). Background removal, enhance, and color grades run
+        on-device via WASM.
       </p>
     </div>
   );
